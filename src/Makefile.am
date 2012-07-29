@@ -1278,6 +1278,16 @@ endif
 collectd_DEPENDENCIES += write_http.la
 endif
 
+if BUILD_PLUGIN_WRITE_OML
+pkglib_LTLIBRARIES    += write_oml.la 
+write_oml_la_SOURCES   = write_oml.c 
+write_oml_la_CFLAGS    = $(AM_CPPFLAGS) $(BUILD_WITH_LIBOMLC_CPPFLAGS)
+write_oml_la_LDFLAGS   = -module -avoid-version $(BUILD_WITH_LIBOMLC_LDFLAGS)
+write_oml_la_LIBADD    = -loml2
+collectd_LDADD += "-dlopen" write_oml.la
+collectd_DEPENDENCIES += write_oml.la
+endif
+
 if BUILD_PLUGIN_WRITE_MONGODB
 pkglib_LTLIBRARIES += write_mongodb.la
 write_mongodb_la_SOURCES = write_mongodb.c

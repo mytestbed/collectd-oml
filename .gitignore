@@ -1,74 +1,53 @@
-# build.sh stuff:
-Makefile.in
-/INSTALL
-/aclocal.m4
-/autom4te.cache
-/autom4te.cache
-/compile
-/config.guess
-/config.sub
-/configure
-/depcomp
-/install-sh
-/libltdl/
-/ltmain.sh
-/missing
-src/config.h.in
-
-# configure stuff:
 Makefile
+bindings/Makefile
+bindings/java/Makefile
+confdefs.h
 config.log
 config.status
+libltdl/
 libtool
-src/.deps
+src/.deps/
 src/collectd.conf
 src/config.h
 src/libcollectdclient/libcollectdclient.pc
 src/stamp-h1
+.gitignore
+bindings/
+autom4te.cache/
+src/.libs/
+src/*.o
+src/*la
+src/*.lo
+src/libcollectdclient/*.o
+src/libcollectdclient/.libs/
+src/libcollectdclient/*.o
+src/libcollectdclient/*la
+src/libcollectdclient/*.lo
+src/liboconfig/*.o
+src/liboconfig/.libs/
+src/liboconfig/*.o
+src/liboconfig/*la
+src/liboconfig/*.lo
 
-# make stuff:
-*.la
-*.lo
-*.o
-.libs/
 src/collectd
 src/collectd-nagios
 src/collectdctl
 src/collectdmon
-src/*.1
+src/config.h.in~
+
 src/*.5
+src/*.1
+
+INSTALL
+Makefile.in
+aclocal.m4
+configure
+src/Makefile.in
+src/config.h.in
+src/libcollectdclient/Makefile.in
 src/libcollectdclient/lcc_features.h
-
-# patch stuff
-*.rej
-*.orig
-
-# lex / yacc stuff:
-ylwrap
+src/liboconfig/Makefile.in
 src/liboconfig/parser.c
 src/liboconfig/parser.h
 src/liboconfig/scanner.c
 
-# make dist stuff:
-/collectd-*.tar.gz
-/collectd-*.tar.bz2
-
-# perl stuff:
-bindings/.perl-directory-stamp
-bindings/perl/Collectd/pm_to_blib
-bindings/perl/blib/
-bindings/perl/pm_to_blib
-
-# java stuff
-bindings/java/java-build-stamp
-bindings/java/org/collectd/api/*.class
-bindings/java/org/collectd/java/*.class
-
-# python stuff
-*.pyc
-
-# tag stuff
-src/tags
-
-# backup stuff
-*~
