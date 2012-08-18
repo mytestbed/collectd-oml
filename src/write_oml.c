@@ -1,17 +1,36 @@
-
-
 #include "string.h"
-#include "time.h"
-#include "pthread.h"
+/*
+ * Copyright 2012 National ICT Australia (NICTA), Australia
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ */
+#include <time.h>
+#include <pthread.h>
+
+#include <oml2/omlc.h>
 
 #include "collectd.h"
 #include "plugin.h"
 #include "common.h"
 #include "utils_cache.h"
 #include "utils_parse_option.h"
-
-#include "oml2/omlc.h"
-
 
 static const char *config_keys[] =
 {
@@ -57,15 +76,15 @@ find_mpoint_struct(
     const char* name
 ) {
   MPoint* first_mp = session.mpoint;
-  MPoint* mp = first_mp;
+  MPoint* mp = first_mp->next;
 
-  do {
+  while (mp != first_mp) {
     if (mp == NULL) return NULL;
     if (strncmp(mp->name, name, DATA_MAX_NAME_LEN) == 0) {
       return mp;
     }
     mp = mp->next;
-  } while (mp != first_mp);
+  } 
   return NULL;
 }
 
@@ -96,7 +115,7 @@ configure_mpoint(
     data_source_t* d = &ds->ds[i];
     OmlMPDef* md = &mp->mp_defs[i + offset];
     char* s = (char*)malloc(sizeof(d->name) + 1);
-    strcpy(s, d->name);
+    strncpy(s, d->name, sizeof(d->name));
     md->name = s;
     assert(d->type <= 3);
     switch(d->type) {
@@ -124,7 +143,6 @@ create_mpoint(
     const value_list_t *vl
 ) {
   MPoint* mp;
-
   // Create MPoint and insert it into session's existing MP chain.
   mp = (MPoint*)malloc(sizeof(MPoint));
   strncpy(mp->name, name, DATA_MAX_NAME_LEN);
@@ -133,12 +151,8 @@ create_mpoint(
     // first one created
     mp->next = mp;
   } else {
-    // insert mp into circular chain
-    MPoint* last = pmp;
-    while (last->next != pmp)
-      last = last->next;
-    pmp->next = mp;
     mp->next = pmp;
+    pmp = mp;
   }
   session.mpoint = mp;
   configure_mpoint(mp, ds, vl);
@@ -155,10 +169,10 @@ find_mpoint(
 
   if (mp == NULL) {
     if (session.oml_intialized) {
-      ERROR("We assumed that all collectors already checked in, but now we found '%s'", name);
+      ERROR("oml_writer plugin: We assumed that all collectors already checked in, but now we found '%s'", name);
     }
     mp = create_mpoint(name, ds, vl);
-  }
+  }   
   if (! session.oml_intialized) {
       // We are waiting for some time before we commit to a set of
       // reportable measurements.
@@ -171,7 +185,7 @@ find_mpoint(
       // OK it's time to commit
       pthread_mutex_lock(&session.init_lock);
       if (! session.oml_intialized) { // just make sure nothing has changed since we aquired the lock
-        DEBUG("Starting OML");
+        DEBUG("oml_writer plugin: Starting OML");
         omlc_start();
         session.oml_intialized = 1;
       }
@@ -189,13 +203,12 @@ oml_write (
     user_data_t __attribute__((unused)) *user_data
 ) {
   MPoint* mp = find_mpoint(ds->type, ds, vl);
-  if (mp == NULL) return(0);
-
+  if (mp == NULL || !session.oml_intialized) return(0);
 
   OmlValueU v[64];
   int header = 6;
   if (vl->values_len >= 64 - header) {
-    ERROR("Can't handle more than 64 values per measurement");
+    ERROR("oml_writer plugin: Can't handle more than 64 values per measurement");
     return(-1);
   }
 
@@ -231,13 +244,13 @@ oml_config(
 ) {
   if (strcasecmp ("ServerURL", key) == 0) {
     session.server_url = (char*)malloc(strlen(value) + 1);
-    strcpy(session.server_url, value);
+    strncpy(session.server_url, value, strlen(value));
   } else if (strcasecmp ("ContextName", key) == 0) {
     session.context_name = (char*)malloc(strlen(value) + 1);
-    strcpy(session.context_name, value);
+    strncpy(session.context_name, value, strlen(value));
   } else if (strcasecmp ("NodeName", key) == 0) {
     session.node_id = (char*)malloc(strlen(value) + 1);
-    strcpy(session.node_id, value);
+    strncpy(session.node_id, value, strlen(value));
   } else if (strcasecmp ("StartupDelay", key) == 0) {
     session.startup_delay = atoi(value);
   } else {
@@ -250,6 +263,11 @@ static int
 oml_init(
     void
 ) {
+  MPoint* mp;
+  mp = (MPoint*)malloc(sizeof(MPoint));
+  mp->next = 0;
+  session.mpoint = mp;
+  
   const char* app_name = "collectd";
   const char* argv[] = {"--oml-server", "file:-", "--oml-id", hostname_g, "--oml-exp-id", "collectd"};
   int argc = 6;
